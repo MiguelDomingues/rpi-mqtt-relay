@@ -1,0 +1,6 @@
+.vscode/settings.json
+.vscode/sftp.json
+bin/
+obj/
+packages/
+config.yaml

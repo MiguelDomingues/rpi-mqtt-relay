@@ -1,0 +1,23 @@
+services:
+  rpi-mqtt-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rpi-mqtt-relay
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      # GPIO and system access
+      - /sys:/sys
+      - /dev:/dev
+      # Configuration file
+      - ./config.yaml:/app/config.yaml
+    environment:
+      # Optional: Add any environment variables your app needs
+      - TZ=UTC
+    # Optional: Uncomment for logging
+    # logging:
+    #   driver: "json-file"
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"

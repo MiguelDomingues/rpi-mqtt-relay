@@ -1,0 +1,5 @@
+{
+    "pi_hostname": "RPI_HOSTNAME_OR_IP",
+    "pi_username": "pi",
+    "pi_root_folder": "/home/pi/rpi-mqtt-relay/"
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+echo "Building docker image..."
+docker build -t rpi-mqtt-relay:arm6vl .

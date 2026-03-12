@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+echo "Installing required packages..."
+sudo apt -y install python3-pip python3-venv
+
+echo "Setting up project directory and virtual environment..."
+cd ~/
+mkdir -p rpi-mqtt-relay
+cd rpi-mqtt-relay
+
+if [ -f dev/bin/activate ]; then
+    echo "Virtual environment already exists."
+else
+    echo "Creating virtual environment."
+    python3 -m venv dev
+fi
+
+echo "Activating virtual environment..."
+source dev/bin/activate
+
+echo "Upgrading pip, wheel, and setuptools..."
+python -m pip install -U pip wheel setuptools
+
+echo "Installing Python packages from requirements.txt..."
+pip install -r requirements.txt -v
+
+echo "Setup complete. Exiting virtual environment..."
+deactivate

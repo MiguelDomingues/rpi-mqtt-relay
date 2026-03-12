@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# To start and wait for remote debugger
+source dev/bin/activate
+
+python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 src/main.py --config config.yaml
+
+deactivate
+
