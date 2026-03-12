@@ -1,5 +1,7 @@
 # RPi MQTT Relay
 
+> ⚠️ **Work in Progress** - This project is still under active development. Features, configuration, and documentation may change.
+
 Raspberry Pi MQTT Relay is a small footprint controller that can receive inputs from an MQTT server, then act on the GPIO to activate/deactivate external relays.
 At the same time, the controller can display information in a LCD display, and publish events to the MQTT server.
 
@@ -9,15 +11,31 @@ All of the reading from MQTT, control of GPIO pins, write to an LCD display, and
 
 ### Using Docker Compose
 
-The recommended way to run the application is using Docker Compose on your Raspberry Pi:
+The recommended way to run the application is using Docker Compose on your Raspberry Pi.
+
+#### Latest Release
+
+To run the latest stable release:
 
 ```bash
 docker-compose up -d
 ```
 
-This will:
+This uses the `latest` tag, which points to the most recent versioned release (e.g., `v1.0.0`).
 
-- Build the Docker image for ARM (arm32v6) architecture
+#### Development Version
+
+To run the latest development build from the main branch:
+
+```bash
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+This uses the `dev` tag, which is updated with every commit to main and may include unreleased features or changes.
+
+Docker Compose will:
+
+- Pull the image from GitHub Container Registry
 - Start the container with privileged access to GPIO and system devices
 - Mount your `config.yaml` for configuration
 - Automatically restart on failure

@@ -1,6 +1,6 @@
 services:
   rpi-mqtt-relay:
-    image: ghcr.io/migueldomingues/rpi-mqtt-relay:latest
+    image: ghcr.io/migueldomingues/rpi-mqtt-relay:dev
     container_name: rpi-mqtt-relay
     restart: unless-stopped
     privileged: true
