@@ -18,7 +18,7 @@ The recommended way to run the application is using Docker Compose on your Raspb
 To run the latest stable release:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 This uses the `latest` tag, which points to the most recent versioned release (e.g., `v1.0.0`).
@@ -28,7 +28,7 @@ This uses the `latest` tag, which points to the most recent versioned release (e
 To run the latest development build from the main branch:
 
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 This uses the `dev` tag, which is updated with every commit to main and may include unreleased features or changes.
