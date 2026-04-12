@@ -238,6 +238,11 @@ class LCDDisplay:
         """
         return self.variable_to_lines.get(variable, set()).copy()
     
+    def get_current_lines(self) -> list:
+        """Return the current rendered values for all LCD lines as a list."""
+        # Return the lines in order
+        return [self.current_values.get(idx, '') for idx in range(len(self.lcd_lines))]
+    
     def cleanup(self):
         """Clean up LCD resources."""
         if self.lcd:

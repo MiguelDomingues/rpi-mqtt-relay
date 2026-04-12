@@ -6,6 +6,8 @@ from mqtt import MQTTListener
 from outputs import GPIOOutputs
 from mqtt_outputs import MQTTOutputs
 from lcd import LCDDisplay
+from web_status import start_web_status_thread
+import threading
 
 
 def main():
@@ -142,8 +144,72 @@ def main():
         mqtt_outputs.update(combined_initial)
         lcd_display.update(combined_initial)
         
+        # After initial evaluation, force update of web status data
+        # This ensures the web endpoint has the latest state even before any MQTT messages are received
+        if hasattr(lcd_display, 'get_current_lines'):
+            lcd_display.get_current_lines()
+        if hasattr(gpio_outputs, 'get_all_states'):
+            gpio_outputs.get_all_states()
+        if hasattr(mqtt_outputs, 'get_all_states'):
+            mqtt_outputs.get_all_states()
+        
         # Connect to broker
         listener.connect()
+        
+        # --- Move get_status here so it captures the live objects ---
+
+        def get_status():
+            try:
+                # Map MQTT input values by topic for consistency, including units
+                mqtt_input_by_topic = {}
+                if hasattr(listener, 'inputs') and hasattr(listener, 'get_all_values'):
+                    values = listener.get_all_values()
+                    for inp in listener.inputs:
+                        topic = inp.get('topic')
+                        var_id = inp.get('id')
+                        unit = inp.get('unit', '')
+                        if topic and var_id in values:
+                            mqtt_input_by_topic[topic] = {
+                                "value": values[var_id],
+                                "unit": unit
+                            }
+
+                # Dependencies
+                dependencies = {
+                    "inputs_to_outputs": {},  # topic -> list of output ids
+                    "inputs_to_lcd": {},      # topic -> list of lcd line indices
+                }
+                # Inputs to outputs and LCD
+                if hasattr(listener, 'inputs') and hasattr(gpio_outputs, 'variable_to_outputs') and hasattr(lcd_display, 'variable_to_lines'):
+                    for inp in listener.inputs:
+                        var_id = inp.get('id')
+                        topic = inp.get('topic')
+                        if not topic or not var_id:
+                            continue
+                        # Outputs
+                        outputs = list(gpio_outputs.variable_to_outputs.get(var_id, set()))
+                        dependencies["inputs_to_outputs"][topic] = outputs
+                        # LCD lines
+                        lcd_lines = list(lcd_display.variable_to_lines.get(var_id, set()))
+                        dependencies["inputs_to_lcd"][topic] = lcd_lines
+
+                return {
+                    "inputs": {
+                        "mqtt": mqtt_input_by_topic
+                    },
+                    "outputs": {
+                        "gpio": gpio_outputs.get_all_states() if 'gpio_outputs' in locals() else {},
+                        "mqtt": mqtt_outputs.get_all_states() if 'mqtt_outputs' in locals() else {},
+                    },
+                    "lcd": lcd_display.get_current_lines() if 'lcd_display' in locals() else [],
+                    "dependencies": dependencies,
+                }
+            except Exception as e:
+                import traceback; traceback.print_exc()
+                return {"error": str(e)}
+
+        # Start web status server in a background thread
+        start_web_status_thread(get_status)
         
         # Start listening (blocking)
         listener.start()
@@ -200,7 +266,6 @@ def main():
             listener.stop()
         
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

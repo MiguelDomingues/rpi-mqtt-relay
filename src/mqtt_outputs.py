@@ -184,6 +184,10 @@ class MQTTOutputs:
         """
         return self.values.copy()
     
+    def get_all_states(self) -> Dict[str, str]:
+        """Return the current state of all MQTT outputs."""
+        return dict(self.values)
+    
     def get_dependencies(self, topic: str) -> Set[str]:
         """Get the variables that an MQTT output depends on.
         

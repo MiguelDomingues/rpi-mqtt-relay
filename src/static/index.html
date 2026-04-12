@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPI MQTT Relay Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2em;
+        }
+
+        .section {
+            margin-bottom: 2em;
+        }
+
+        .columns {
+            display: flex;
+            gap: 2em;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .column {
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 1.5em 2em;
+            min-width: 220px;
+            box-shadow: 0 2px 8px #0001;
+        }
+
+        .column h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5em;
+        }
+
+        ul {
+            padding-left: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.5em;
+        }
+
+        .lcd-line {
+            font-family: monospace;
+            background: #222;
+            color: #0f0;
+            padding: 0.3em 0.7em;
+            border-radius: 4px;
+            margin-bottom: 0.5em;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>RPI MQTT Relay Status</h1>
+        <div style="display: flex; align-items: center; gap: 0.5em;">
+            <label for="autorefresh-toggle" style="font-size: 1em; cursor: pointer;">Auto Refresh</label>
+            <input type="checkbox" id="autorefresh-toggle" checked style="transform: scale(1.3); cursor: pointer;">
+        </div>
+    </div>
+    <div class="section">
+        <button onclick="fetchStatus()">Refresh</button>
+    </div>
+    <div class="columns">
+        <div class="column" id="mqtt-column">
+            <h2>MQTT Inputs</h2>
+            <ul id="mqtt-list">
+                <li>Loading...</li>
+            </ul>
+        </div>
+        <div class="column" id="lcd-column">
+            <h2>LCD Display</h2>
+            <div id="lcd-lines">Loading...</div>
+        </div>
+        <div class="column" id="gpio-column">
+            <h2>GPIO Outputs</h2>
+            <ul id="gpio-list">
+                <li>Loading...</li>
+            </ul>
+            <h2 style="margin-top:2em;">MQTT Outputs</h2>
+            <ul id="mqttout-list">
+                <li>Loading...</li>
+            </ul>
+        </div>
+    </div>
+    <script src="static/status.js"></script>
+</body>
+
+</html>
