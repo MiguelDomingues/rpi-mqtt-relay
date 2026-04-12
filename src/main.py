@@ -1,6 +1,7 @@
 """RPi MQTT Relay Controller - Main entry point."""
 
 import sys
+import signal
 from config import Config
 from mqtt import MQTTListener
 from outputs import GPIOOutputs
@@ -15,6 +16,47 @@ def main():
     print("=" * 60)
     print("Starting RPi MQTT Relay Controller...")
     print("=" * 60)
+    
+    # Variables to store references for cleanup during signal handling
+    cleanup_objects = {
+        'gpio_outputs': None,
+        'lcd_display': None,
+        'mqtt_outputs': None,
+        'listener': None,
+    }
+    
+    def handle_shutdown(signum, frame):
+        """Handle shutdown signal (SIGTERM, SIGINT).
+        
+        Called when Docker sends SIGTERM or user sends Ctrl+C.
+        """
+        signal_name = signal.Signals(signum).name
+        print(f"\n\nReceived {signal_name}, shutting down gracefully...")
+        
+        # Clean up LCD first
+        if cleanup_objects['lcd_display']:
+            cleanup_objects['lcd_display'].cleanup()
+        
+        # Turn off all GPIO outputs
+        if cleanup_objects['gpio_outputs']:
+            cleanup_objects['gpio_outputs'].cleanup()
+        
+        # Publish final MQTT states with GPIO outputs OFF
+        if cleanup_objects['mqtt_outputs'] and cleanup_objects['listener']:
+            final_values = cleanup_objects['listener'].get_all_values().copy()
+            if cleanup_objects['gpio_outputs']:
+                final_values.update(cleanup_objects['gpio_outputs'].get_all_states())
+            cleanup_objects['mqtt_outputs'].shutdown(final_values)
+        
+        # Stop MQTT listener
+        if cleanup_objects['listener']:
+            cleanup_objects['listener'].stop()
+        
+        sys.exit(0)
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, handle_shutdown)
+    signal.signal(signal.SIGINT, handle_shutdown)
     
     try:
         # Load configuration
@@ -35,6 +77,7 @@ def main():
         # Create LCD display manager first (shows initialization on screen)
         print("\nInitializing LCD display...")
         lcd_display = LCDDisplay(config)
+        cleanup_objects['lcd_display'] = lcd_display
         
         # Display LCD lines and their dependencies
         print(f"\nFound {len(config.lcd_config.get('lines', []))} LCD line(s):")
@@ -46,6 +89,7 @@ def main():
         # Create GPIO outputs manager
         print("\nInitializing GPIO outputs manager...")
         gpio_outputs = GPIOOutputs(config)
+        cleanup_objects['gpio_outputs'] = gpio_outputs
         
         # Print dependencies
         print("\nOutput dependencies:")
@@ -63,10 +107,12 @@ def main():
         # Create MQTT listener (without callback for now)
         print("\nInitializing MQTT listener...")
         listener = MQTTListener(config)
+        cleanup_objects['listener'] = listener
         
         # Create MQTT outputs manager
         print("\nInitializing MQTT outputs manager...")
         mqtt_outputs = MQTTOutputs(config, listener.client)
+        cleanup_objects['mqtt_outputs'] = mqtt_outputs
         
         # Display loaded MQTT outputs
         print(f"\nFound {len(config.mqtt_outputs)} MQTT output(s):")
@@ -85,24 +131,26 @@ def main():
                 changed_variable: ID of the variable that changed
             """
             # Update GPIO outputs based on MQTT inputs
+            # Note: This may schedule timers for delayed changes, actual state changes
+            # (and GPIO propagation) happen in on_state_change callback after delays complete
             gpio_changes = gpio_outputs.update(mqtt_values, changed_variable)
             
-            # Combine MQTT inputs and GPIO output states for MQTT outputs
+            # Combine MQTT inputs and GPIO output states
             combined_values = mqtt_values.copy()
             combined_values.update(gpio_outputs.get_all_states())
             
-            # Update MQTT outputs with combined values
+            # Update MQTT outputs with combined values (for immediate state changes only)
             # First, update based on the MQTT input that changed
             mqtt_outputs.update(combined_values, changed_variable)
             
-            # Then, if any GPIO outputs changed, update MQTT outputs that depend on them
+            # Then, if any GPIO outputs changed immediately, update MQTT outputs that depend on them
             for gpio_output_id in gpio_changes.keys():
                 mqtt_outputs.update(combined_values, gpio_output_id)
             
             # Update LCD display with combined values
             lcd_display.update(combined_values, changed_variable)
             
-            # If GPIO outputs changed, also update LCD lines that depend on them
+            # If GPIO outputs changed immediately, also update LCD lines that depend on them
             for gpio_output_id in gpio_changes.keys():
                 lcd_display.update(combined_values, gpio_output_id)
         
@@ -112,6 +160,9 @@ def main():
         # Create callback for when GPIO state changes complete (including after delays)
         def on_gpio_state_change(output_id: str, new_state: bool):
             """Handle GPIO state changes (called after delays complete).
+            
+            This is where GPIO-to-GPIO propagation happens, ensuring we only propagate
+            AFTER delays have been applied.
             
             Args:
                 output_id: GPIO output ID that changed
@@ -124,11 +175,30 @@ def main():
             combined_values = mqtt_values.copy()
             combined_values.update(gpio_outputs.get_all_states())
             
-            # Update MQTT outputs that depend on this GPIO output
+            # Propagate GPIO-to-GPIO changes, starting from this output that just changed
+            # Only outputs that depend on this changed output will be re-evaluated
+            propagated_changes = gpio_outputs.propagate_gpio_changes(
+                combined_values, 
+                recently_changed_gpio_ids={output_id}
+            )
+            
+            # Re-combine with updated GPIO states after propagation
+            combined_values = mqtt_values.copy()
+            combined_values.update(gpio_outputs.get_all_states())
+            
+            # Update MQTT outputs for the initially changed GPIO output
             mqtt_outputs.update(combined_values, output_id)
             
-            # Update LCD lines that depend on this GPIO output
+            # Update MQTT outputs for any propagated changes
+            for propagated_output_id in propagated_changes.keys():
+                mqtt_outputs.update(combined_values, propagated_output_id)
+            
+            # Update LCD lines for the initially changed GPIO output
             lcd_display.update(combined_values, output_id)
+            
+            # Update LCD lines for any propagated changes
+            for propagated_output_id in propagated_changes.keys():
+                lcd_display.update(combined_values, propagated_output_id)
         
         # Set the callback on GPIO outputs
         gpio_outputs.on_state_change = on_gpio_state_change
@@ -138,7 +208,12 @@ def main():
         initial_values = listener.get_all_values()
         gpio_outputs.update(initial_values)
         
-        # Combine for MQTT outputs and LCD
+        # Propagate initial state changes across dependent GPIO outputs
+        combined_initial = initial_values.copy()
+        combined_initial.update(gpio_outputs.get_all_states())
+        gpio_outputs.propagate_gpio_changes(combined_initial, recently_changed_gpio_ids=set(gpio_outputs.states.keys()))
+        
+        # Re-combine after propagation
         combined_initial = initial_values.copy()
         combined_initial.update(gpio_outputs.get_all_states())
         mqtt_outputs.update(combined_initial)

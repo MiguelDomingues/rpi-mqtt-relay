@@ -349,6 +349,85 @@ class GPIOOutputs:
         """
         return self.variable_to_outputs.get(variable, set()).copy()
     
+    def propagate_gpio_changes(self, values: Dict[str, Any], recently_changed_gpio_ids: Optional[Set[str]] = None) -> Dict[str, bool]:
+        """Re-evaluate GPIO outputs that depend on recently changed GPIO outputs.
+        
+        When a GPIO output changes, other GPIO outputs that depend on it need to be
+        re-evaluated. This method finds GPIO outputs that depend on the recently changed
+        outputs and re-evaluates them, continuing until no more changes occur.
+        
+        Args:
+            values: Dictionary of all current values (MQTT inputs + GPIO outputs)
+            recently_changed_gpio_ids: Set of GPIO output IDs that just changed. 
+                                      If None, checks all GPIO outputs with GPIO dependencies.
+            
+        Returns:
+            Dictionary of output IDs that changed
+        """
+        changes = {}
+        max_iterations = 10  # Safeguard against infinite loops
+        iteration = 0
+        
+        # Start with recently changed outputs, or all outputs if not specified
+        outputs_to_check = recently_changed_gpio_ids if recently_changed_gpio_ids else set(self.states.keys())
+        
+        while iteration < max_iterations and outputs_to_check:
+            iteration += 1
+            logger.debug(f"GPIO propagation iteration {iteration}, checking: {outputs_to_check}")
+            
+            any_changed = False
+            next_outputs_to_check = set()
+            
+            # Find all outputs that depend on the recently changed outputs
+            for changed_output_id in outputs_to_check:
+                # These are the outputs that depend on the changed output
+                dependent_outputs = self.variable_to_outputs.get(changed_output_id, set())
+                
+                for output_id in dependent_outputs:
+                    # Skip if output doesn't depend on any GPIO outputs
+                    gpio_dependencies = self.dependencies.get(output_id, set()) & set(self.states.keys())
+                    if not gpio_dependencies:
+                        continue
+                    
+                    # Evaluate this output
+                    template = self.templates.get(output_id)
+                    if not template:
+                        continue
+                    
+                    current_state = self.states.get(output_id)
+                    
+                    try:
+                        result = template.render(**values)
+                        if isinstance(result, str):
+                            desired_state = result.strip().lower() in ('true', '1', 'yes', 'on')
+                        else:
+                            desired_state = bool(result)
+                    except Exception as e:
+                        logger.error(f"Error evaluating template for '{output_id}': {e}")
+                        desired_state = False
+                    
+                    # If state changed, handle it
+                    if current_state != desired_state:
+                        any_changed = True
+                        self._handle_state_change(output_id, desired_state, changes)
+                        # Update values dict with the new state
+                        values[output_id] = desired_state
+                        # This output changed, so we need to check outputs that depend on it in next iteration
+                        next_outputs_to_check.add(output_id)
+            
+            # Continue with the outputs that just changed
+            outputs_to_check = next_outputs_to_check
+            
+            # If nothing changed, we're done
+            if not any_changed:
+                logger.debug(f"GPIO propagation complete after {iteration} iteration(s)")
+                break
+        
+        if iteration >= max_iterations:
+            logger.warning("GPIO propagation reached max iterations - possible circular dependency")
+        
+        return changes
+    
     def get_output_info(self, output_id: str) -> Optional[Dict[str, Any]]:
         """Get configuration info for an output.
         
