@@ -1,6 +1,7 @@
 """MQTT output manager for publishing values based on templates."""
 
 import logging
+from datetime import datetime
 from typing import Dict, Any, Optional, Set
 from jinja2 import Environment, Template, meta
 from config import Config
@@ -40,6 +41,8 @@ class MQTTOutputs:
         
         # Jinja2 environment
         self.jinja_env = Environment()
+        # Add now() function to Jinja2 for timestamp templates
+        self.jinja_env.globals['now'] = datetime.now
         
         # Initialize outputs
         for idx, output_config in enumerate(self.mqtt_outputs):

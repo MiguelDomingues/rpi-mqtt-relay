@@ -2,6 +2,7 @@
 
 import logging
 import threading
+from datetime import datetime
 from typing import Dict, Any, Optional, Set
 from jinja2 import Environment, Template, meta
 from config import Config
@@ -51,6 +52,8 @@ class GPIOOutputs:
         
         # Jinja2 environment
         self.jinja_env = Environment()
+        # Add now() function to Jinja2 for timestamp templates
+        self.jinja_env.globals['now'] = datetime.now
         
         # Callback for when a GPIO state change completes (called from _apply_state_change)
         self.on_state_change = None  # Will be set to callback(output_id: str, new_state: bool)
