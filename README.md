@@ -28,7 +28,7 @@ This uses the `latest` tag, which points to the most recent versioned release (e
 To run the latest development build from the main branch:
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 This uses the `dev` tag, which is updated with every commit to main and may include unreleased features or changes.
@@ -199,3 +199,32 @@ With the configuration in place, you can debug the application directly on the R
 - `./scripts/debug` - Run with Python debugger attached
 - `./scripts/test` - Run tests on the Pi
 - `./scripts/build` - Build Docker image on the Pi
+
+## Web Status API
+
+A minimal web interface is available for status monitoring. After starting the controller, visit:
+
+    http://<raspberry-pi-ip>:5000/status
+
+This endpoint returns a JSON object with the current state of all MQTT inputs, GPIO outputs, MQTT outputs, and LCD lines.
+
+Example output:
+
+```json
+{
+  "inputs": {"temperature": 22.5, "ph": 7.1, ...},
+  "gpio_outputs": {"drain_pump": false, ...},
+  "mqtt_outputs": {"rpi-mqtt-relay/relay/drain_pump": "OFF", ...},
+  "lcd": ["  100 % |  22.5 °C", " 7.10 pH"]
+}
+```
+
+> **Note:**
+> To access the web status API from outside the container, add the following to your `docker-compose.yml` or `docker-compose.dev.yml` under the `rpi-mqtt-relay` service:
+>
+> ```yaml
+>     ports:
+>       - "5000:5000"
+> ```
+>
+> This maps the container's port 5000 to the host, making the web interface available at `http://<raspberry-pi-ip>:5000/status`.

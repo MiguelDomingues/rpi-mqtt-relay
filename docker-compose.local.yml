@@ -1,7 +1,9 @@
 services:
-  rpi-mqtt-relay:
-    image: ghcr.io/migueldomingues/rpi-mqtt-relay:latest
-    container_name: rpi-mqtt-relay
+  rpi-mqtt-relay-dev:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: rpi-mqtt-relay-dev
     restart: unless-stopped
     privileged: true
     volumes:
