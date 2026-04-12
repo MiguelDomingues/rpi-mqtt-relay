@@ -112,8 +112,8 @@ class GPIOOutputs:
                 pin = output_config.get('pin')
                 if pin:
                     GPIO.setup(pin, GPIO.OUT)
-                    # Initialize to LOW (OFF)
-                    GPIO.output(pin, GPIO.LOW)
+                    # Initialize to HIGH (OFF)
+                    GPIO.output(pin, GPIO.HIGH)
                     logger.info(f"GPIO Pin {pin} initialized for '{output_id}'")
                     print(f"GPIO Pin {pin} initialized for '{output_id}'")
             
@@ -296,7 +296,7 @@ class GPIOOutputs:
         
         # Update GPIO pin if available
         if GPIO_AVAILABLE and pin:
-            gpio_state = GPIO.HIGH if new_state else GPIO.LOW
+            gpio_state = GPIO.LOW if new_state else GPIO.HIGH
             GPIO.output(pin, gpio_state)
             logger.debug(f"GPIO Pin {pin} set to {gpio_state}")
         
@@ -385,7 +385,7 @@ class GPIOOutputs:
                 
                 if pin:
                     try:
-                        GPIO.output(pin, GPIO.LOW)
+                        GPIO.output(pin, GPIO.HIGH)
                         self.states[output_id] = False
                         logger.info(f"GPIO Pin {pin} ({output_name}) set to OFF")
                         print(f"  - Pin {pin} ({output_name}): OFF")
