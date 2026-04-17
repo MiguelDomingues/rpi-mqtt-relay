@@ -216,6 +216,33 @@ class LCDDisplay:
             print(f"✗ ERROR writing to LCD line {line_idx}: {e}")
             logger.error(f"Error writing to LCD line {line_idx}: {e}")
     
+    def refresh(self):
+        """Clear and redraw the entire LCD display.
+        
+        Use this periodically to fix scrambled display issues caused by
+        I2C communication glitches. Redraws all current line values.
+        """
+        if not LCD_AVAILABLE or not self.lcd:
+            return False
+        
+        try:
+            logger.info("Refreshing LCD display (clear and redraw)")
+            print("DEBUG LCD: Refreshing display...")
+            self.lcd.clear()
+            
+            # Redraw all lines with their current values
+            for line_idx in range(len(self.lcd_lines)):
+                text = self.current_values.get(line_idx, '')
+                if text:  # Only write if there's content
+                    self._write_line(line_idx, text)
+            
+            print("✓ LCD display refreshed")
+            return True
+        except Exception as e:
+            logger.error(f"Error refreshing LCD display: {e}")
+            print(f"✗ ERROR refreshing LCD display: {e}")
+            return False
+    
     def get_dependencies(self, line_idx: int) -> Set[str]:
         """Get the variables that an LCD line depends on.
         

@@ -2,6 +2,7 @@
 
 import sys
 import signal
+import time
 from config import Config
 from mqtt import MQTTListener
 from outputs import GPIOOutputs
@@ -230,6 +231,21 @@ def main():
         
         # Connect to broker
         listener.connect()
+        
+        # Start LCD refresh thread to prevent display corruption
+        # (I2C communication glitches can cause scrambled characters over time)
+        def lcd_refresh_loop():
+            """Periodically refresh LCD display to prevent scrambling."""
+            refresh_interval = 30  # seconds
+            while True:
+                try:
+                    time.sleep(refresh_interval)
+                    lcd_display.refresh()
+                except Exception as e:
+                    print(f"✗ ERROR in LCD refresh thread: {e}")
+        
+        lcd_refresh_thread = threading.Thread(target=lcd_refresh_loop, daemon=True)
+        lcd_refresh_thread.start()
         
         # --- Move get_status here so it captures the live objects ---
 
