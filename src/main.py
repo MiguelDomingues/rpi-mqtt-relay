@@ -236,10 +236,25 @@ def main():
         # (I2C communication glitches can cause scrambled characters over time)
         def lcd_refresh_loop():
             """Periodically refresh LCD display to prevent scrambling."""
-            refresh_interval = 30  # seconds
+            refresh_interval = 120  # seconds (2 minutes to avoid interfering with updates)
+            health_check_interval = 30  # Check if LCD is responsive every 30 seconds
+            last_health_check = 0
+            
             while True:
                 try:
                     time.sleep(refresh_interval)
+                    
+                    # Check LCD health periodically
+                    current_time = time.time()
+                    if current_time - last_health_check >= health_check_interval:
+                        last_health_check = current_time
+                        if not lcd_display.is_lcd_responsive():
+                            print("⚠ LCD not responding, attempting recovery...")
+                            lcd_display.recover_from_error()
+                        else:
+                            print("✓ LCD health check: OK")
+                    
+                    # Normal refresh
                     lcd_display.refresh()
                 except Exception as e:
                     print(f"✗ ERROR in LCD refresh thread: {e}")
