@@ -3,6 +3,6 @@ RPi.GPIO==0.7.1
 RPLCD==1.4.0
 paho-mqtt==2.1.0
 PyYAML==6.0.3
-Jinja2==3.1.2
+Jinja2==3.1.6
 smbus2==0.6.1
 Flask==3.1.3
