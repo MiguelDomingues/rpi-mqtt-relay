@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    container_name: rpi-mqtt-relay-dev
+    container_name: rpi-mqtt-relay-local
     restart: unless-stopped
     privileged: true
     volumes:
