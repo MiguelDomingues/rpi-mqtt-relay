@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "Natizyskunk.sftp",
-        "mermaidchart.vscode-mermaid-chart"
+        "mermaidchart.vscode-mermaid-chart",
+        "davidanson.vscode-markdownlint"
     ]
 }
