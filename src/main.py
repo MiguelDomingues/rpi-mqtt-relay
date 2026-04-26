@@ -2,14 +2,12 @@
 
 import sys
 import signal
-import time
 from config import Config
 from mqtt import MQTTListener
 from outputs import GPIOOutputs
 from mqtt_outputs import MQTTOutputs
 from lcd import LCDDisplay
 from web_status import start_web_status_thread
-import threading
 
 
 def main():
@@ -231,36 +229,6 @@ def main():
         
         # Connect to broker
         listener.connect()
-        
-        # Start LCD refresh thread to prevent display corruption
-        # (I2C communication glitches can cause scrambled characters over time)
-        def lcd_refresh_loop():
-            """Periodically refresh LCD display to prevent scrambling."""
-            refresh_interval = 120  # seconds (2 minutes to avoid interfering with updates)
-            health_check_interval = 30  # Check if LCD is responsive every 30 seconds
-            last_health_check = 0
-            
-            while True:
-                try:
-                    time.sleep(refresh_interval)
-                    
-                    # Check LCD health periodically
-                    current_time = time.time()
-                    if current_time - last_health_check >= health_check_interval:
-                        last_health_check = current_time
-                        if not lcd_display.is_lcd_responsive():
-                            print("⚠ LCD not responding, attempting recovery...")
-                            lcd_display.recover_from_error()
-                        else:
-                            print("✓ LCD health check: OK")
-                    
-                    # Normal refresh
-                    lcd_display.refresh()
-                except Exception as e:
-                    print(f"✗ ERROR in LCD refresh thread: {e}")
-        
-        lcd_refresh_thread = threading.Thread(target=lcd_refresh_loop, daemon=True)
-        lcd_refresh_thread.start()
         
         # --- Move get_status here so it captures the live objects ---
 
