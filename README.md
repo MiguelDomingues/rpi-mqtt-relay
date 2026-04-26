@@ -80,6 +80,15 @@ To build and run the application locally from your source code:
 docker compose -f docker-compose.local.yml up -d --build
 ```
 
+Docker still reuses cached intermediate layers when inputs are unchanged, so this command does not fully rebuild every time.
+
+If you need to force a full rebuild, use:
+
+```bash
+docker compose -f docker-compose.local.yml build --no-cache rpi-mqtt-relay-dev
+docker compose -f docker-compose.local.yml up -d
+```
+
 This configuration:
 
 - Builds the Docker image locally from your Dockerfile
