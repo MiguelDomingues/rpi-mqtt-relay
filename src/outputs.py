@@ -21,6 +21,21 @@ logger = logging.getLogger(__name__)
 
 class GPIOOutputs:
     """Manages GPIO outputs by evaluating Jinja2 templates."""
+
+    @staticmethod
+    def _gpio_level_for_state(logical_state: bool, active_low: bool) -> int:
+        """Map logical ON/OFF state to electrical GPIO level.
+
+        Args:
+            logical_state: True for logical ON, False for logical OFF
+            active_low: True when relay/input is active on LOW level
+
+        Returns:
+            GPIO.HIGH or GPIO.LOW
+        """
+        if active_low:
+            return GPIO.LOW if logical_state else GPIO.HIGH
+        return GPIO.HIGH if logical_state else GPIO.LOW
     
     def __init__(self, config: Config):
         """Initialize GPIO outputs manager.
@@ -114,9 +129,10 @@ class GPIOOutputs:
             if GPIO_AVAILABLE:
                 pin = output_config.get('pin')
                 if pin:
+                    active_low = output_config.get('active_low', False)
                     GPIO.setup(pin, GPIO.OUT)
-                    # Initialize to HIGH (OFF)
-                    GPIO.output(pin, GPIO.HIGH)
+                    # Initialize to logical OFF, respecting configured polarity.
+                    GPIO.output(pin, self._gpio_level_for_state(False, active_low))
                     logger.info(f"GPIO Pin {pin} initialized for '{output_id}'")
                     print(f"GPIO Pin {pin} initialized for '{output_id}'")
             
@@ -299,7 +315,8 @@ class GPIOOutputs:
         
         # Update GPIO pin if available
         if GPIO_AVAILABLE and pin:
-            gpio_state = GPIO.LOW if new_state else GPIO.HIGH
+            active_low = output_config.get('active_low', False)
+            gpio_state = self._gpio_level_for_state(new_state, active_low)
             GPIO.output(pin, gpio_state)
             logger.debug(f"GPIO Pin {pin} set to {gpio_state}")
         
@@ -467,7 +484,8 @@ class GPIOOutputs:
                 
                 if pin:
                     try:
-                        GPIO.output(pin, GPIO.HIGH)
+                        active_low = output_config.get('active_low', False)
+                        GPIO.output(pin, self._gpio_level_for_state(False, active_low))
                         self.states[output_id] = False
                         logger.info(f"GPIO Pin {pin} ({output_name}) set to OFF")
                         print(f"  - Pin {pin} ({output_name}): OFF")

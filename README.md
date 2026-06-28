@@ -331,9 +331,9 @@ outputs:
 #### How Delays Work
 
 1. When template evaluates to `true`, the controller starts a timer for the **on** delay
-2. After the delay expires, the GPIO pin is set HIGH (activated)
+2. After the delay expires, the output is set to logical ON
 3. When template evaluates to `false`, the controller starts a timer for the **off** delay
-4. After the delay expires, the GPIO pin is set LOW (deactivated)
+4. After the delay expires, the output is set to logical OFF
 5. If the template output changes before the delay completes, the timer is cancelled and restarted
 
 #### Use cases
@@ -341,6 +341,28 @@ outputs:
 - **Long on-delays**: Prevent accidental activation (safety measure for pump control)
 - **Short off-delays**: Stabilize outputs that flicker or oscillate
 - **Zero delays**: Set to `0` for immediate response (e.g., `delay: { on: 0, off: 0 }`)
+
+### Output Polarity (active_low)
+
+Each GPIO output can define whether the physical pin should be active on LOW or HIGH.
+
+- `active_low: false` (default): logical ON = GPIO HIGH (about 3.3V), logical OFF = GPIO LOW (about 0V)
+- `active_low: true`: logical ON = GPIO LOW (about 0V), logical OFF = GPIO HIGH (about 3.3V)
+
+Example for `pool_pump_force_start` with ON at 3.3V:
+
+```yaml
+outputs:
+  gpio:
+  - id: pool_pump_force_start
+    name: Pool Pump Force Start
+    pin: 25
+    active_low: false
+    on: "{{ remote_control_pool_pump == 'ON' }}"
+    delay:
+      on: 15
+      off: 5
+```
 
 ### Template Variables & Filters
 
