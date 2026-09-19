@@ -1,4 +1,4 @@
-debugpy==1.8.21
+debugpy==1.8.22
 RPi.GPIO==0.7.1
 RPLCD==1.4.0
 paho-mqtt==2.1.0
